@@ -296,7 +296,7 @@ u32 sub_0059C(char *modname, char *libname, u32 nid) // Verify and restructurate
 		{
 			if(name)
 			{
-				SceLibraryEntryTable *ent_table = mod->ent_top + counter; // StubTable maybe?
+				SceLibraryEntryTable *ent_table = mod->ent_top + counter; // StubTable maybe? Structs are basically the same.
 				if(ent_table->libname)
 				{
 					if(strcmp(ent_table->libname, name))
