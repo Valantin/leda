@@ -282,128 +282,54 @@ char *sub_004DC (const char *libname)
     return modname;
 }
 
-/**
- * Subroutine at address 0x0000059C
- */
-int sub_0059C(char *modname, char *libname, u32 nid)
+u32 sub_0059C(char *modname, char *libname, u32 nid) // Verify and restructurate flow
 {
-  sp = sp + 0xFFFFFFE0;
-  ((int *) sp)[3] = s3;
-  ((int *) sp)[1] = s1;
-  ((int *) sp)[0] = s0;
-  ((int *) sp)[6] = ra;
-  ((int *) sp)[5] = s5;
-  ((int *) sp)[4] = s4;
-  ((int *) sp)[2] = s2;
-  var1 = arg2;
-  var4 = sctrlHENFindFunction(modname, libname, nid);
-  var5 = var4;
-  if (var4 != 0x00000000)
-  {
-    var15 = sceKernelFindModuleByName(modname);
-    var16 = ((int *) var15)[17];//ent_size
-    var17 = ((int *) var15)[16];//ent_top
-    if (var16 <= 0)
-    {
-
-    label30:
-      ra = ((int *) sp)[6];
-      var6 = ((int *) sp)[5];
-
-    label31:
-      var7 = ((int *) sp)[4];
-      var8 = ((int *) sp)[3];
-      var9 = ((int *) sp)[2];
-      var10 = ((int *) sp)[1];
-      var11 = ((int *) sp)[0];
-      var12 = 0x00000000;
-      sp = sp + 0x00000020;
-    }
-    else
-    {
-      var18 = 0x00000000;
-      while (1) {
-        var19 = var17 + var18;
-        if (var1 == 0x00000000)
-        {
-
-        label16:
-          var25 = ((unsigned short *) var19)[5];
-          var26 = ((unsigned char *) var19)[9];
-          var27 = ((int *) var19)[3];
-          if (var25 == 0x00000000)
-          {
-
-          label27:
-            var33 = ((unsigned char *) var19)[8];
-
-          label28:
-            var18 = var18 + (var33 << 0x00000002);
-            ra = ((int *) sp)[6];
-            if (((var18 < var16)) != 0x00000000)
-              continue;
-            var6 = ((int *) sp)[5];
-            goto label31;
-          }
-          else
-          {
-            var28 = var25 + var26;
-            if (var28 <= 0)
-              goto label27;
-            var29 = (var28 << 0x00000002) + var27;
-            var30 = ((int *) var29)[0];
-            if (var5 == var30)
-              break;
-            var31 = var29;
-            var32 = 0x00000000;
-            var32 = var32 + 0x00000001;
-            if (!(var28 != var32))
-              goto label27;
-            var34 = ((int *) var31)[1];
-            var31 = var31 + 0x00000004;
-            if (!(var5 == var34))
-              continue;
-            var12 = ((int *) ((var32 << 0x00000002) + var27))[0];
-            goto label26;
-          }
-        }
-        else
-        {
-          var20 = ((int *) var19)[0];
-          if (var20 == 0x00000000)
-          {
-            var33 = ((unsigned char *) var19)[8];
-            goto label28;
-          }
-          else
-          {
-            var23 var24 = strcmp (var20, var1);
-            if (!(var23 != 0x00000000))
-              goto label16;
-            var33 = ((unsigned char *) var19)[8];
-            goto label28;
-          }
-        }
-        goto label32;
-      }
-      var12 = ((int *) (0x00000000 + var27))[0];
-
-    label26:
-      ra = ((int *) sp)[6];
-      var6 = ((int *) sp)[5];
-      var7 = ((int *) sp)[4];
-      var8 = ((int *) sp)[3];
-      var9 = ((int *) sp)[2];
-      var10 = ((int *) sp)[1];
-      var11 = ((int *) sp)[0];
-      sp = sp + 0x00000020;
-    }
-  }
-  else
-  goto label30;
-
-label32:
-  return var12;
+	u32 func = sctrlHENFindFunction(modname, libname, nid);
+	char *name = libname;
+	if(func)
+	{
+		SceModule *mod = sceKernelFindModuleByName(modname); // Use correct SceModule struct! http://forums.ps2dev.org/viewtopic.php?t=12769
+		if(mod->ent_size < 0)
+			return 0;
+		u32 counter = 0;
+		while(counter < mod->ent_size)
+		{
+			if(name)
+			{
+				SceLibraryEntryTable *ent_table = mod->ent_top + counter; // StubTable maybe? Structs are basically the same.
+				if(ent_table->libname)
+				{
+					if(strcmp(ent_table->libname, name))
+					{
+						goto loop_end;
+					}
+				}
+				if(ent_table->stubcount)
+				{
+					if((ent_table->stubcount + ent_table->vstubcount) > 0)
+					{
+						if((*((u32 *)((ent_table->stubcount + ent_table->vstubcount) << 2) + ent_table->entrytable)) == func)
+						{
+							u32 i = 0,t_addr = ent_table->stubcount + ent_table->vstubcount) << 2) + ent_table->entrytable;
+							while(i != (ent_table->stubcount + ent_table->vstubcount))
+							{
+								u32 ad = *((u32 *)t_addr);
+								if(func == ad)
+								{
+									return *((u32 *)(i << 2) + ent_table->entrytable);
+								}
+								i++;
+								t_addr += 4;
+							}
+						}
+					}
+				}
+			}
+		loop_end:
+			counter += (ent_table->len << 2);
+		}
+	}
+	return 0;
 }
 
 /**
